@@ -14,3 +14,13 @@ To ssh onto worker node, do the following (replace with the right worker node ip
 ssh -i $HOME/ray_bootstrap_key.pem ubuntu@172.31.13.42
 ubuntu@ip-172-31-13-42:~$ docker exec -it ray_container bash
 ```
+
+The training/tuning takes about 11min. 
+best_checkpoint folder stores the best checkpoint for demoing the following operations, so that we don't have to wait!
+
+To get an AIR checkpoint out of it, simply do
+
+```
+from ray.air.checkpoint import Checkpoint
+best_checkpoint = Checkpoint.from_directory("./best_checkpoint")
+```
