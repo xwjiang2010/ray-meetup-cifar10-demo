@@ -29,10 +29,10 @@ transform = transforms.Compose(
 )
 
 def train_dataset_factory():
-    return torchvision.datasets.CIFAR10(root="./data", download=False, train=True, transform=transform)
+    return torchvision.datasets.CIFAR10(root="~/data", download=False, train=True, transform=transform)
 
 def test_dataset_factory():
-    return torchvision.datasets.CIFAR10(root="./data", download=False, train=False, transform=transform)
+    return torchvision.datasets.CIFAR10(root="~/data", download=False, train=False, transform=transform)
 
 def convert_batch_to_numpy(batch: Tuple[torch.Tensor, int]) -> Dict[str, np.ndarray]:
     images = np.array([image.numpy() for image, _ in batch])
@@ -130,9 +130,12 @@ def train_loop_per_worker(config):
         train_dataset_batches = train_dataset_shard.iter_torch_batches(
             batch_size=512,
         )
+        train_loss = 0
+        total_images = 0
         for i, batch in enumerate(train_dataset_batches):
             # get the inputs and labels
             inputs, labels = batch["image"], batch["label"]
+            num_images = inputs.shape[0]
             inputs, labels = inputs.to(device), labels.to(device)
 
             # zero the parameter gradients
@@ -144,12 +147,10 @@ def train_loop_per_worker(config):
             loss.backward()
             optimizer.step()
 
-            # print statistics
-            train_loss += loss.item()
-            if i % 2000 == 1999:  # print every 2000 mini-batches
-                print(f"[{epoch + 1}, {i + 1:5d}] loss: {train_loss / 2000:.3f}")
-                train_loss = 0.0
+            train_loss += loss.item() * num_images
+            total_images += num_images
 
+        train_loss /= total_images
         metrics = dict(train_loss=train_loss)
         checkpoint = TorchCheckpoint.from_state_dict(model.module.state_dict())
         session.report(metrics, checkpoint=checkpoint)
